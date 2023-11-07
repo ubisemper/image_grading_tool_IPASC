@@ -1,7 +1,4 @@
 import os
-import shutil
-import uuid
-import zipfile
 import logging
 
 from dotenv import load_dotenv
@@ -9,11 +6,9 @@ from botocore.exceptions import ClientError
 from flask import Flask, make_response, request, jsonify
 
 from services.S3StorageService import S3StorageService
-from ApiResponse import ApiResponse
+from services.Zipper import ZipAndUploadService
 from utils.Sanitation import allowed_file_zip
-
-
-
+from ApiResponse import ApiResponse
 
 # SERVER CONFIGURATION STEPS
 app = Flask(__name__)
@@ -84,31 +79,9 @@ def upload_zip():
 
         if not uploaded_zip_file and not allowed_file_zip(uploaded_zip_file.filename):
             return ApiResponse.customResponse(data=None, message='No file uploaded', status=400)
-
-        folder_name = f'upload-{uuid.uuid4()}'
-
-        extract_dir = './temp'
-        os.makedirs(extract_dir, exist_ok=True)
-        os.chmod(extract_dir, 0o777)
-
-        zip_file_path = os.path.join(extract_dir, uploaded_zip_file.filename)
-        uploaded_zip_file.save(zip_file_path)
-
-        extract_subdir = os.path.join(extract_dir, 'extracted')
-        os.makedirs(extract_subdir, exist_ok=True)
-
-        with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
-            zip_ref.extractall(extract_subdir)
-
-        for root, _, files in os.walk(extract_subdir):
-            for file in files:
-                image_path = os.path.join(root, file)
-                object_key_zip = folder_name + '/' + file
-                logging.info(f'uploading {object_key_zip}....')
-                s3_storage_service.upload_file(image_path, object_key_zip)
-
-        os.remove(zip_file_path)
-        shutil.rmtree('temp')
+        
+        zipper = ZipAndUploadService(s3_storage_service)
+        zipper.process_zip_file(uploaded_zip_file)
 
         logging.info(f'upload successful')
         return ApiResponse.customResponse(data=None, message='files uploaded successfully', status=201)
