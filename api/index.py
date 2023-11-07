@@ -2,96 +2,79 @@ import os
 import shutil
 import uuid
 import zipfile
+import logging
 
+from dotenv import load_dotenv
+from botocore.exceptions import ClientError
 from flask import Flask, make_response, request, jsonify
 
-app = Flask(__name__)
-
-import boto3
-from botocore.client import Config
-import logging
-from botocore.exceptions import ClientError
-
+from services.S3StorageService import S3StorageService
 from ApiResponse import ApiResponse
-AWS_ACCESS_KEY = 'AKIAIOSFODNN7EXAMPLE'
-AWS_SECRET_KEY = 'wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY'
-S3_ENDPOINT = 'http://localhost:9444/s3'
-
-bucket_name = 'asd'
-object_key = 'object_test1.png'
-
-s3 = boto3.client('s3', endpoint_url=S3_ENDPOINT,
-                  aws_access_key_id=AWS_ACCESS_KEY,
-                  aws_secret_access_key=AWS_SECRET_KEY,
-                  config=Config(signature_version='s3v4'))
+from utils.Sanitation import allowed_file_zip
 
 
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'jpg', 'jpeg', 'png', 'gif'}
 
 
-def allowed_file_zip(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in {'zip'}
+# SERVER CONFIGURATION STEPS
+app = Flask(__name__)
+load_dotenv()
+logging.basicConfig(level=logging.INFO)
 
+s3_credentials = {
+    'access_key': os.getenv('AWS_ACCESS_KEY'),
+    'secret_key': os.getenv('AWS_SECRET_KEY'),
+    'end_point_url': os.getenv('S3_ENDPOINT'),
+    'bucket_name': os.getenv('BUCKET_NAME'),
+}
 
-@app.route("/api/python")
-def hello_world():
-    return "<p>Hello, World!</p>"
+s3_storage_service = S3StorageService(s3_credentials)
 
 
 @app.route("/api/get_all_file_names")
 def get_all_file_names():
     try:
-        objects = s3.list_objects_v2(Bucket=bucket_name)
-        file_names = [obj['Key'] for obj in objects.get('Contents', [])]
+        file_names = s3_storage_service.get_all_file_names()
         return ApiResponse.customResponse(data=file_names, message='success', status=200)
     except Exception as e:
         logging.error('ERRR:', e)
         return ApiResponse.serverError(message=str(e))
-
-
-@app.route("/api/get_all_files_in_folder")
-def get_all_files_in_folder():
-    folderName = request.args.to_dict()['folderName']
-
-    try:
-        objects = s3.list_objects_v2(Bucket=bucket_name)
-        file_names = [obj['Key'] for obj in objects.get('Contents', [])]
-
-        filtered_files = [file for file in file_names if file.startswith(folderName + '/')]
-        return ApiResponse.customResponse(data=filtered_files, message='success', status=200)
-    except Exception as e:
-        logging('Err', e)
-        return ApiResponse.serverError(message=str(e))
-
+    
 
 @app.route("/api/get_all_folder_names")
 def get_all_folder_names():
     try:
-        objects = s3.list_objects_v2(Bucket=bucket_name)
-        file_names = [obj['Key'] for obj in objects.get('Contents', [])]
-        folder_names = {file_name.split('/')[0] for file_name in file_names}
+        folder_names = s3_storage_service.get_all_folder_names()
         return ApiResponse.customResponse(data=list(folder_names), message='success', status=200)
     except Exception as e:
         logging.error('ERRR:', e)
         return ApiResponse.serverError(message=str(e))
 
 
-# OOPIFY
-@app.route("/api/get_file_by_name")
-def get_file_by_name():
-    filenameQuery = request.args.to_dict()['filename']
-    print('ARGSS: ', filenameQuery)
+# TODO: Input sanitation
+@app.route("/api/get_all_files_in_folder")
+def get_all_files_in_folder():
+    folderName = request.args.to_dict()['folderName']
 
     try:
-        image_data = s3.get_object(Bucket=bucket_name, Key=filenameQuery)['Body'].read()
+        filtered_file_names = s3_storage_service.get_file_names_in_folder(folderName)
+        return ApiResponse.customResponse(data=filtered_file_names, message='success', status=200)
+    except Exception as e:
+        logging('Err', e)
+        return ApiResponse.serverError(message=str(e))
+
+
+@app.route("/api/get_file_by_name")
+def get_file_by_name():
+    try:
+        filenameQuery = request.args.to_dict()['filename']
+        image_data = s3_storage_service.get_file_by_name(filenameQuery)
     except ClientError as e:
         logging.error(e)
         return ApiResponse.serverError(message=str(e))
 
     response = make_response(image_data)
     response.headers['Content-Type'] = 'image/jpeg'
-    return ApiResponse.customResponse(data=response, message='success', status=200)
+    return response, 200
 
 
 @app.route("/api/upload_zip", methods=['POST'])
@@ -122,12 +105,12 @@ def upload_zip():
                 image_path = os.path.join(root, file)
                 object_key_zip = folder_name + '/' + file
                 logging.info(f'uploading {object_key_zip}....')
-                s3.upload_file(image_path, bucket_name, object_key_zip)
+                s3_storage_service.upload_file(image_path, object_key_zip)
 
         os.remove(zip_file_path)
         shutil.rmtree('temp')
 
-        logging.info(f'upload successfull {bucket_name}')
+        logging.info(f'upload successful')
         return ApiResponse.customResponse(data=None, message='files uploaded successfully', status=201)
 
     except Exception as e:
