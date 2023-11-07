@@ -6,14 +6,20 @@ from botocore.exceptions import ClientError
 from flask import Flask, make_response, request, jsonify
 
 from services.S3StorageService import S3StorageService
-from services.Zipper import ZipAndUploadService
+from services.ZipperService import ZipAndUploadService
 from utils.Sanitation import allowed_file_zip
 from ApiResponse import ApiResponse
+from sqlTest import Database
 
 # SERVER CONFIGURATION STEPS
 app = Flask(__name__)
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
+
+db_url = 'sqlite:///test.sqlite'
+db = Database(db_url)
+db.create_all()
+
 
 s3_credentials = {
     'access_key': os.getenv('AWS_ACCESS_KEY'),
@@ -31,7 +37,7 @@ def get_all_file_names():
         file_names = s3_storage_service.get_all_file_names()
         return ApiResponse.customResponse(data=file_names, message='success', status=200)
     except Exception as e:
-        logging.error('ERRR:', e)
+        logging.error('Error:', e)
         return ApiResponse.serverError(message=str(e))
     
 
@@ -41,7 +47,7 @@ def get_all_folder_names():
         folder_names = s3_storage_service.get_all_folder_names()
         return ApiResponse.customResponse(data=list(folder_names), message='success', status=200)
     except Exception as e:
-        logging.error('ERRR:', e)
+        logging.error('Error:', e)
         return ApiResponse.serverError(message=str(e))
 
 
@@ -88,4 +94,18 @@ def upload_zip():
 
     except Exception as e:
         logging.error('Error: ', e)
+        return ApiResponse.serverError(message=str(e))
+    
+
+# TODO Check if file is valid or not
+@app.route("/api/grade_image")
+def grade_image():
+    fileName = request.args.to_dict()['fileName']
+    user = request.args.to_dict()['user']
+    grade = request.args.to_dict()['grade']
+
+    try:
+        db.add_grade(fileName, user, int(grade))
+        return ApiResponse.customResponse(data=None, message='grade uploaded successfully', status=201)
+    except Exception as e:
         return ApiResponse.serverError(message=str(e))

@@ -3,8 +3,14 @@ import shutil
 import zipfile
 import uuid
 import logging
+from sqlTest import Database
 
 # TODO: File checker
+
+db_url = 'sqlite:///test.sqlite'
+db = Database(db_url)
+db.create_all()
+
 
 class ZipAndUploadService:
     def __init__(self, storage_service, extract_dir='./temp'):
@@ -12,7 +18,8 @@ class ZipAndUploadService:
         self.extract_dir = extract_dir
     
     def process_zip_file(self, uploaded_zip_file):
-         folder_name = f'upload-{uuid.uuid4()}'
+         folder_name_incoming = uploaded_zip_file.filename.split('/')[0]
+         folder_name = f'upload-{folder_name_incoming}'
 
          os.makedirs(self.extract_dir, exist_ok=True)
          os.chmod(self.extract_dir, 0o777)
@@ -33,6 +40,7 @@ class ZipAndUploadService:
                  object_key_zip = folder_name + '/' + file
                  logging.info(f'uploading {object_key_zip}....')
                  self.storage_service.upload_file(image_path, object_key_zip)
+                 db.add_file(object_key_zip)
 
          os.remove(zip_file_path)
          shutil.rmtree('temp')
