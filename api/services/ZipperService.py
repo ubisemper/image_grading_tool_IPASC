@@ -2,26 +2,28 @@ import os
 import shutil
 import zipfile
 import logging
-from sqlTest import Database
+
+# from api.dataModels import Database
 
 # TODO: File checker
 
-db_url = "sqlite:///test.sqlite"
-db = Database(db_url)
-db.create_all()
+# db_url = "sqlite:///test.sqlite"
+# db = Database(db_url)
+# db.create_all()
 
 
 class ZipAndUploadService:
-    def __init__(self, storage_service, extract_dir="./temp"):
+    def __init__(self, db, storage_service, extract_dir="./temp"):
         self.storage_service = storage_service
         self.extract_dir = extract_dir
+        self.db = db
 
     def process_zip_file(self, uploaded_zip_file):
         folder_name_incoming = uploaded_zip_file.filename.split("/")[0]
         folder_name = f"upload-{folder_name_incoming}"
 
         # TODO: Exctract this to db handler
-        db.add_folder(folder_name)
+        self.db.add_folder(folder_name)
 
         os.makedirs(self.extract_dir, exist_ok=True)
         os.chmod(self.extract_dir, 0o777)
@@ -45,7 +47,7 @@ class ZipAndUploadService:
                 self.storage_service.upload_file(image_path, object_key_zip)
 
                 # TODO: Exctract this to db handler
-                db.add_image(file, folder_name)
+                self.db.add_image(file, folder_name)
 
         os.remove(zip_file_path)
         shutil.rmtree("temp")

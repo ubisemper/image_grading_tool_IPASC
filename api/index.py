@@ -1,9 +1,6 @@
 import os
 import logging
 
-# import zipfile
-# import datetime
-
 from dotenv import load_dotenv
 from botocore.exceptions import ClientError
 from flask import Flask, make_response, request, send_file
@@ -13,8 +10,10 @@ from services.S3StorageService import S3StorageService
 from services.ZipperService import ZipAndUploadService
 from utils.Sanitation import allowed_file_zip
 from ApiResponse import ApiResponse
-from sqlTest import Database
-from sqlQueries import process_images
+from dataModels import Database
+
+# from sqlQueries import process_images
+from services.datasetService import datasetService
 
 # SERVER CONFIGURATION STEPS
 
@@ -41,6 +40,7 @@ s3_credentials = {
 }
 
 s3_storage_service = S3StorageService(s3_credentials)
+dataset_service = datasetService(db, s3_credentials)
 
 
 @app.route("/api/trigger_zip")
@@ -52,28 +52,10 @@ def trigger_zip():
     )
 
 
-# @celery.task
-# def zip_images(folder_name):
-#     image_dir = "./images"
-#     current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-#     zip_file_path = f"./images_zipped/images_{current_time}.zip"
-
-#     print("folder_name", folder_name)
-
-#     with zipfile.ZipFile(zip_file_path, "w") as zipf:
-#         for root, _, files in os.walk(image_dir):
-#             for file in files:
-#                 if file.endswith(".jpg") or file.endswith(
-#                     ".png"
-#                 ):  # add more conditions if you have other image types
-#                     zipf.write(os.path.join(root, file), arcname=file)
-
-#     return zip_file_path
-
-
 @celery.task
 def create_dataset(folder_name):
-    return process_images(folder_name)
+    # return process_images(folder_name)
+    return dataset_service.process_images(folder_name)
 
 
 @app.route("/api/download/<task_id>")
@@ -149,7 +131,7 @@ def upload_zip():
                 data=None, message="No file uploaded", status=400
             )
 
-        zipper = ZipAndUploadService(s3_storage_service)
+        zipper = ZipAndUploadService(db, s3_storage_service)
         zipper.process_zip_file(uploaded_zip_file)
 
         logging.info(f"upload successful")
@@ -166,7 +148,7 @@ def upload_zip():
 @app.route("/api/grade_image")
 def grade_image():
     fileName = request.args.to_dict()["fileName"]
-    folder_name, fileName = fileName.split("/")  # filter to only text after last /
+    folder_name, fileName = fileName.split("/")
     grade = request.args.to_dict()["grade"]
 
     try:

@@ -12,9 +12,6 @@ export default function Home() {
   const [fileNames, setFileNames] = useState<returnData | null>(null);
   const [folderNames, setFolderNames] = useState<returnData | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
-  const [selectedFileNames, setSelectedFileNames] = useState<string[] | null>(
-    null
-  );
 
   const [username, setUsername] = useState("");
   const [savedUserName, setSavedUserName] = useState("");

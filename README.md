@@ -9,7 +9,7 @@ The toolkit is broken down in 4 parts
 - [Nextjs13](https://nextjs.org/blog/next-13) for frontend 
 - [Flask](https://flask.palletsprojects.com/en/3.0.x/) for backend API 
 - [S3 ninja](https://s3ninja.net/) storage emulator
-- [Reddis](https://hub.docker.com/_/redis) for tasks management
+- [Reddis](https://hub.docker.com/_/redis) for task management
 
 First setup the backend services:
 - Start s3 storage emulator: `docker run -p 9444:9000 scireum/s3-ninja`
