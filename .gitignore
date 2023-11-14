@@ -31,6 +31,9 @@ yarn-error.log*
 venv/
 venv
 
+.png
+.zip
+
 .sqlite
 # vercel
 .vercel
