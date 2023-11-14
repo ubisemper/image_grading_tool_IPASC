@@ -20,12 +20,7 @@ const DashboardPage = () => {
   const [folderNames, setFolderNames] = useState<returnData | null>(null);
   const [file, setFile] = useState<File | null>(null);
 
-  useEffect(() => {
-    fetch("/api/get_all_folder_names")
-      .then((response) => response.json())
-      .then((responseData) => setFolderNames(responseData))
-      .catch((error) => console.error("Error fetching data", error));
-  }, [file]);
+  const [taskId, setTaskId] = useState<string | null>();
 
   useEffect(() => {
     if (selectedFolder) {
@@ -34,7 +29,16 @@ const DashboardPage = () => {
         .then((responseData) => setFileNames(responseData))
         .catch((error) => console.error("Error fetching data", error));
     }
+    setSelectedImageIndex(0);
+    console.log("IDX", selectedImageIndex);
   }, [selectedFolder]);
+
+  useEffect(() => {
+    fetch("/api/get_all_folder_names")
+      .then((response) => response.json())
+      .then((responseData) => setFolderNames(responseData))
+      .catch((error) => console.error("Error fetching data", error));
+  }, [file]);
 
   const handleSelect = (folderName: string) => {
     setSelectedFolder(folderName);
@@ -85,7 +89,52 @@ const DashboardPage = () => {
       .catch((error) => console.error("Error fetching data", error));
   };
 
-  console.log(selectedClass, fileNames?.data[0]);
+  const handleGradeUpload = async () => {
+    if (!fileNames || selectedClass === 0) {
+      throw new Error("File names not provided | class not selected");
+    }
+
+    const response = await fetch(
+      `/api/grade_image?fileName=${fileNames.data[selectedImageIndex]}&user=wytse&grade=${selectedClass}`
+    );
+
+    if (response.ok) {
+      console.log("graded sucessfully");
+    } else {
+      console.log("FAILED");
+    }
+  };
+
+  const handleZipTrigger = async (folderName: string) => {
+    const response = await fetch(`/api/trigger_zip?folderName=${folderName}`, {
+      method: "GET",
+    });
+
+    if (response.ok) {
+      console.log("zip triggered successfully");
+      const responseData = await response.json();
+      setTaskId(responseData.data);
+    } else {
+      console.log("FAILED");
+    }
+  };
+
+  const handleDownloadTrigger = async () => {
+    const response = await fetch(`/api/download/${taskId}`, {
+      method: "GET",
+    });
+
+    if (response.ok) {
+      console.log("download triggered successfully");
+      const downloadLink = await response;
+      console.log("download link: ", downloadLink.url);
+      window.open(downloadLink.url);
+    } else {
+      console.log("FAILED");
+    }
+  };
+
+  console.log(fileNames?.data[selectedImageIndex]);
 
   return (
     <div className="flex flex-col md:flex-row h-screen">
@@ -119,14 +168,33 @@ const DashboardPage = () => {
               folderNames={folderNames}
             />
           </div>
+
+          <button
+            id="zip-trigger-button"
+            className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+            type="submit"
+            onClick={() => handleZipTrigger(selectedFolder)}
+          >
+            Trigger Zip
+          </button>
+          <button
+            id="download-trigger-button"
+            className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+            type="submit"
+            onClick={handleDownloadTrigger}
+          >
+            Trigger Download
+          </button>
         </div>
       </div>
       <div className="flex-1 flex items-center justify-center">
         {fileNames ? (
           <ImageSelector
+            onIndex={(index) => handleImageSelect(index)}
             imageAlt="asd"
-            imageClasses={[1, 2]}
+            imageClasses={[1, 2, 3, 4, 5]}
             fileNames={fileNames}
+            onSubmit={handleGradeUpload}
             onClassSelect={(selectedClass: number) =>
               handleGradeSelect(selectedImageIndex, selectedClass)
             }

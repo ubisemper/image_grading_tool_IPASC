@@ -1,0 +1,21 @@
+version: '3'
+services:
+  flask-app:
+    build: .
+    ports:
+      - "5328:5328"
+    environment:
+      - FLASK_APP=index.py
+    depends_on:
+      - s3-service
+      - redis
+
+  s3-service:
+    image: scireum/s3-ninja
+    ports:
+      - "9444:9000"
+
+  redis:
+    image: "redis:latest"
+    ports:
+      - "6379:6379"

@@ -84,13 +84,14 @@ export default function Home() {
   const handleIndex = (index: number) => {
     setIndex(index);
   };
+
   const handleGradeUpload = async () => {
     if (!fileNames) {
       throw new Error("File names note provided");
     }
 
     const response = await fetch(
-      `/api/grade_image?fileName=${fileNames.data[index]}&user=${username}&grade=${grade}`
+      `/api/grade_image?fileName=${fileNames.data[index]}&grade=${grade}`
     );
 
     if (response.ok) {

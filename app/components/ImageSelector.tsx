@@ -1,6 +1,9 @@
+"use client";
+
 import Image from "next/image";
 import { useEffect } from "react";
 import ImageViewer from "./ImageViewer";
+import { useRouter } from "next/navigation";
 
 type returnData = {
   data: string[];
@@ -13,11 +16,9 @@ interface ImageSelectorProps {
   imageClasses: number[];
   selectedClass: number;
   onClassSelect: (classIndex: number) => void;
+  onSubmit: () => void;
+  onIndex: (index: number) => void;
 }
-
-const handleIndex = (index: number) => {
-  console.log(index);
-};
 
 export const ImageSelector = ({
   fileNames,
@@ -25,12 +26,26 @@ export const ImageSelector = ({
   imageClasses,
   selectedClass,
   onClassSelect,
+  onSubmit,
+  onIndex,
 }: ImageSelectorProps) => {
+  const handleIndex = (index: number) => {
+    onIndex(index);
+    console.log(index);
+  };
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const key = Number(event.key);
       if (key >= 1 && key <= 5) {
         onClassSelect(key);
+      } else if (event.key === "Enter") {
+        // Get a reference to the submit button
+        const submitButton = document.getElementById("submit-button");
+        if (submitButton) {
+          // Programmatically click the submit button
+          submitButton.click();
+        }
       }
     };
     document.addEventListener("keydown", handleKeyDown);
@@ -59,18 +74,29 @@ export const ImageSelector = ({
           </div>
         )}
       </div>
+
       <div className="flex justify-center space-x-4 p-4 bg-gray-100">
         {imageClasses.map((grade, index) => (
           <button
             key={grade}
             className={`bg-gray-200 rounded-md p-4 text-lg ${
-              selectedClass === index + 1 ? "bg-blue-400 text-black" : ""
+              selectedClass === index + 1
+                ? "bg-red-500 text-black"
+                : "bg-gray-200"
             } hover:bg-blue-100`}
             onClick={() => onClassSelect(index + 1)}
           >
             {`class ${grade}`}
           </button>
         ))}
+        <button
+          id="submit-button"
+          className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800"
+          type="submit"
+          onClick={onSubmit}
+        >
+          Submit
+        </button>
       </div>
     </div>
   );
