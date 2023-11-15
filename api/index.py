@@ -52,25 +52,6 @@ def trigger_zip():
     )
 
 
-# @celery.task
-# def zip_images(folder_name):
-#     image_dir = "./images"
-#     current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-#     zip_file_path = f"./images_zipped/images_{current_time}.zip"
-
-#     print("folder_name", folder_name)
-
-#     with zipfile.ZipFile(zip_file_path, "w") as zipf:
-#         for root, _, files in os.walk(image_dir):
-#             for file in files:
-#                 if file.endswith(".jpg") or file.endswith(
-#                     ".png"
-#                 ):  # add more conditions if you have other image types
-#                     zipf.write(os.path.join(root, file), arcname=file)
-
-#     return zip_file_path
-
-
 @celery.task
 def create_dataset(folder_name):
     return process_images(folder_name)

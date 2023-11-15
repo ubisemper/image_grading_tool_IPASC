@@ -24,7 +24,6 @@ class Image(Base):
     folder = relationship("Folder", back_populates="images")
 
 
-# TODO ADD THE FOLDER AS WELL DUMMY
 class Grade(Base):
     __tablename__ = "grades"
 

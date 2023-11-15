@@ -2,7 +2,7 @@ import os
 import shutil
 import zipfile
 import logging
-from sqlTest import Database
+from api.dataModels import Database
 
 # TODO: File checker
 
